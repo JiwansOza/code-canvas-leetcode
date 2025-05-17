@@ -1,8 +1,10 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import CodeBlock from './CodeBlock';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { ChevronDown, ExternalLink } from 'lucide-react';
 
 export type ProblemDetails = {
   id: number;
@@ -36,6 +38,14 @@ const ProblemDetail = ({ problem }: ProblemDetailProps) => {
           <Badge className={difficultyColor[problem.difficulty]}>
             {problem.difficulty}
           </Badge>
+          <a 
+            href={`https://leetcode.com/problems/${problem.title.toLowerCase().replace(/\s+/g, '-')}/`}
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="ml-auto text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm"
+          >
+            View on LeetCode <ExternalLink size={14} />
+          </a>
         </div>
         
         <div className="flex flex-wrap gap-2 mb-6">
