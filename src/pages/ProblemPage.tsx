@@ -50,15 +50,48 @@ const ProblemPage = () => {
           const solutionsData: SolutionEntry[] = await response.json();
           
           // Filter solutions for the current problem
-          const problemSolutions = solutionsData.filter(solution => 
-            solution.slug.includes(String(foundProblem.id).padStart(4, '0')) ||
-            solution.slug === slug ||
-            solution.title.toLowerCase() === foundProblem.title.toLowerCase()
-          );
+          // Check for slug matches, title matches, or content that might contain the problem name
+          const problemSolutions = solutionsData.filter(solution => {
+            // Check if the slug contains the current slug
+            if (solution.slug && solution.slug.includes(slug)) return true;
+            
+            // Check if the title contains the problem title
+            if (solution.title && solution.title.toLowerCase().includes(foundProblem.title.toLowerCase())) return true;
+            
+            // Sometimes the language field might actually contain the title (based on the example data)
+            if (solution.language && solution.language.toLowerCase().includes(foundProblem.title.toLowerCase())) return true;
+            
+            return false;
+          });
+          
+          console.log(`Found ${problemSolutions.length} solutions for problem ${foundProblem.title}`);
           
           // Group solutions by language
           problemSolutions.forEach(solution => {
-            solutions[solution.language] = solution.code;
+            // Determine the actual language from the data
+            // In some entries, the "language" field might actually contain the title
+            let language = solution.language.toLowerCase();
+            
+            // Common programming languages to check for
+            const languageChecks = ['python', 'java', 'cpp', 'c++', 'javascript', 'typescript', 'go'];
+            
+            // If the language field doesn't appear to be an actual language
+            if (!languageChecks.some(lang => language.includes(lang))) {
+              // Try to extract language from the title field or set a default
+              const titleLower = solution.title.toLowerCase();
+              const detectedLang = languageChecks.find(lang => titleLower.includes(lang));
+              language = detectedLang || 'unknown';
+            }
+            
+            // Normalize language names
+            if (language.includes('python')) language = 'python';
+            else if (language.includes('java') && !language.includes('javascript')) language = 'java';
+            else if (language.includes('c++') || language.includes('cpp')) language = 'cpp';
+            else if (language.includes('javascript')) language = 'javascript';
+            else if (language.includes('typescript')) language = 'typescript';
+            else if (language.includes('go')) language = 'go';
+            
+            solutions[language] = solution.code;
           });
           
           // If we couldn't find any solutions

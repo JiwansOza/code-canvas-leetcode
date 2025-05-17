@@ -31,6 +31,14 @@ const ProblemDetail = ({ problem }: ProblemDetailProps) => {
   // Generate a LeetCode URL from the problem title
   const leetCodeUrl = `https://leetcode.com/problems/${problem.title.toLowerCase().replace(/\s+/g, '-')}/`;
   
+  // Check if we have any valid solutions
+  const hasSolutions = Object.keys(problem.solutions).length > 0;
+  const solutionMessage = !hasSolutions 
+    ? "No solutions found for this problem." 
+    : Object.keys(problem.solutions).some(lang => 
+        problem.solutions[lang] && !problem.solutions[lang].includes("No solution found")
+      ) ? "" : "No solutions found for this problem.";
+  
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden animate-fade-in">
       <div className="p-6">
@@ -71,7 +79,11 @@ const ProblemDetail = ({ problem }: ProblemDetailProps) => {
           <AccordionItem value="solution" className="border-b">
             <AccordionTrigger className="text-lg font-medium">Solution</AccordionTrigger>
             <AccordionContent>
-              <CodeBlock code={problem.solutions} className="mb-4" />
+              {solutionMessage ? (
+                <p className="text-muted-foreground py-4">{solutionMessage}</p>
+              ) : (
+                <CodeBlock code={problem.solutions} className="mb-4" />
+              )}
             </AccordionContent>
           </AccordionItem>
           
