@@ -7,16 +7,26 @@ type SearchBarProps = {
   placeholder?: string;
   className?: string;
   animated?: boolean;
+  value?: string; // Added this prop
 };
 
 const SearchBar = ({ 
   onSearch, 
   placeholder = "Search problems...", 
   className = "",
-  animated = true 
+  animated = true,
+  value: externalValue // Added this prop with a renamed parameter to avoid conflicts
 }: SearchBarProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  // If externalValue is provided, use it as initial state
+  const [searchQuery, setSearchQuery] = useState(externalValue || '');
   const [isFocused, setIsFocused] = useState(false);
+  
+  // Update internal state when external value changes
+  React.useEffect(() => {
+    if (externalValue !== undefined) {
+      setSearchQuery(externalValue);
+    }
+  }, [externalValue]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

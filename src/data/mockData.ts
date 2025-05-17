@@ -1,4 +1,6 @@
+
 import { Problem } from '@/components/ProblemCard';
+import { ProblemDetails } from '@/components/ProblemDetail';
 
 // Mock data for featured problems on the home page
 export const mockFeaturedProblems: Problem[] = [
@@ -192,10 +194,10 @@ export const mockProblems: Problem[] = [
 ];
 
 // Mock data for detailed problem view
-export const mockProblemDetails = {
+export const mockProblemDetails: ProblemDetails = {
   id: 1,
   title: "Two Sum",
-  difficulty: "Easy",
+  difficulty: "Easy", // This needs to be exactly "Easy", "Medium", or "Hard"
   description: `<p>Given an array of integers <code>nums</code> and an integer <code>target</code>, return <em>indices of the two numbers such that they add up to <code>target</code></em>.</p>
                 <p>You may assume that each input would have <strong>exactly one solution</strong>, and you may not use the <em>same</em> element twice.</p>
                 <p>You can return the answer in any order.</p>
