@@ -3,7 +3,6 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import CodeBlock from './CodeBlock';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { ChevronDown, ExternalLink } from 'lucide-react';
 
 export type ProblemDetails = {
@@ -29,6 +28,9 @@ const ProblemDetail = ({ problem }: ProblemDetailProps) => {
     Hard: 'badge-hard'
   };
   
+  // Generate a LeetCode URL from the problem title
+  const leetCodeUrl = `https://leetcode.com/problems/${problem.title.toLowerCase().replace(/\s+/g, '-')}/`;
+  
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden animate-fade-in">
       <div className="p-6">
@@ -39,7 +41,7 @@ const ProblemDetail = ({ problem }: ProblemDetailProps) => {
             {problem.difficulty}
           </Badge>
           <a 
-            href={`https://leetcode.com/problems/${problem.title.toLowerCase().replace(/\s+/g, '-')}/`}
+            href={leetCodeUrl}
             target="_blank" 
             rel="noopener noreferrer"
             className="ml-auto text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm"
@@ -86,7 +88,7 @@ const ProblemDetail = ({ problem }: ProblemDetailProps) => {
       
       <div className="bg-secondary/30 p-4 border-t border-border">
         <p className="text-sm text-muted-foreground">
-          Solution credit: <a href="https://github.com/walkccc/LeetCode" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Peng-Yu Chen (walkccc)</a> under MIT license.
+          Solution credit: Local solutions data stored in leetcode_solutions.json
         </p>
       </div>
     </div>

@@ -8,10 +8,19 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { mockProblems } from '@/data/mockData';
 import { useToast } from '@/components/ui/use-toast';
+import { ProblemDetails } from '@/components/ProblemDetail';
+
+// Define the type for solution entries in the JSON
+interface SolutionEntry {
+  slug: string;
+  title: string;
+  language: string;
+  code: string;
+}
 
 const ProblemPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [problem, setProblem] = useState<any | null>(null);
+  const [problem, setProblem] = useState<ProblemDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -29,55 +38,60 @@ const ProblemPage = () => {
           throw new Error("Problem not found");
         }
         
-        // Get the problem ID for the GitHub repo
-        const problemId = String(foundProblem.id).padStart(4, '0');
-        
-        // Fetch the problem details from GitHub
+        // Fetch solutions from local JSON file
         const solutions: Record<string, string> = {};
         
-        // Languages to fetch
-        const languages = ['python', 'java', 'cpp'];
-        
-        // Try to fetch each language solution
-        await Promise.all(languages.map(async (lang) => {
-          let extension = lang;
-          if (lang === 'cpp') extension = 'cpp';
-          else if (lang === 'java') extension = 'java';
-          else if (lang === 'python') extension = 'py';
-          
-          try {
-            // Format the GitHub raw content URL
-            const url = `https://raw.githubusercontent.com/walkccc/LeetCode/main/solutions/${problemId}.%20${foundProblem.title.replace(/\s+/g, '%20')}/${extension === 'py' ? 'main.' + extension : 'Solution.' + extension}`;
-            
-            const response = await fetch(url);
-            
-            if (response.ok) {
-              const code = await response.text();
-              solutions[lang] = code;
-            } else {
-              console.log(`No ${lang} solution found for problem ${foundProblem.title}`);
-            }
-          } catch (err) {
-            console.error(`Error fetching ${lang} solution:`, err);
+        try {
+          const response = await fetch('/leetcode_solutions.json');
+          if (!response.ok) {
+            throw new Error(`Failed to fetch solutions: ${response.status}`);
           }
-        }));
-        
-        // If we couldn't find any solutions
-        if (Object.keys(solutions).length === 0) {
+          
+          const solutionsData: SolutionEntry[] = await response.json();
+          
+          // Filter solutions for the current problem
+          const problemSolutions = solutionsData.filter(solution => 
+            solution.slug.includes(String(foundProblem.id).padStart(4, '0')) ||
+            solution.slug === slug ||
+            solution.title.toLowerCase() === foundProblem.title.toLowerCase()
+          );
+          
+          // Group solutions by language
+          problemSolutions.forEach(solution => {
+            solutions[solution.language] = solution.code;
+          });
+          
+          // If we couldn't find any solutions
+          if (Object.keys(solutions).length === 0) {
+            console.log(`No solutions found for problem ${foundProblem.title}`);
+            toast({
+              title: "No solutions found",
+              description: "Couldn't find solutions for this problem in the local JSON file",
+              variant: "destructive"
+            });
+            
+            // Use placeholder solution message
+            solutions.python = "// No solution found in the local JSON file";
+            solutions.java = "// No solution found in the local JSON file";
+            solutions.cpp = "// No solution found in the local JSON file";
+          }
+          
+        } catch (err) {
+          console.error("Error fetching solutions:", err);
           toast({
-            title: "No solutions found",
-            description: "Couldn't find solutions in the GitHub repo for this problem",
+            title: "Error loading solutions",
+            description: "Failed to load solutions from the local JSON file",
             variant: "destructive"
           });
           
-          // Use placeholder solution message
-          solutions.python = "// No solution found in GitHub repository";
-          solutions.java = "// No solution found in GitHub repository";
-          solutions.cpp = "// No solution found in GitHub repository";
+          // Use placeholder solution message for error case
+          solutions.python = "// Error loading solutions from the local JSON file";
+          solutions.java = "// Error loading solutions from the local JSON file";
+          solutions.cpp = "// Error loading solutions from the local JSON file";
         }
         
         // Create a problem object with the found solutions
-        const problemDetails = {
+        const problemDetails: ProblemDetails = {
           id: foundProblem.id,
           title: foundProblem.title,
           difficulty: foundProblem.difficulty as "Easy" | "Medium" | "Hard",
@@ -85,8 +99,8 @@ const ProblemPage = () => {
                         <p>View the full problem on <a href="https://leetcode.com/problems/${slug}/" target="_blank" rel="noopener noreferrer">LeetCode</a>.</p>`,
           tags: foundProblem.tags,
           solutions: solutions,
-          explanation: `<p>Solutions provided by <a href="https://github.com/walkccc/LeetCode" target="_blank" rel="noopener noreferrer">walkccc/LeetCode</a> GitHub repository.</p>
-                       <p>For a detailed explanation, please visit the repository.</p>`
+          explanation: `<p>Solutions loaded from local JSON file.</p>
+                       <p>For a detailed explanation, please visit the LeetCode website.</p>`
         };
         
         setProblem(problemDetails);
