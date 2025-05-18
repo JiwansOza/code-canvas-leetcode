@@ -9,6 +9,14 @@ import Footer from '@/components/Footer';
 import { mockProblems } from '@/data/mockData';
 import { useToast } from '@/components/ui/use-toast';
 import { ProblemDetails } from '@/components/ProblemDetail';
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious 
+} from '@/components/ui/pagination';
 
 // Define the type for solution entries in the JSON
 interface SolutionEntry {
@@ -18,11 +26,18 @@ interface SolutionEntry {
   code: string;
 }
 
+// Helper function to extract problem number from a string
+function extractProblemNumber(text: string): string | null {
+  const match = text.match(/^\d+/);
+  return match ? match[0] : null;
+}
+
 const ProblemPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const [problem, setProblem] = useState<ProblemDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [prevSlug, setNextSlug] = useState<{prev: string | null, next: string | null}>({prev: null, next: null});
   const { toast } = useToast();
   
   useEffect(() => {
@@ -33,10 +48,18 @@ const ProblemPage = () => {
           throw new Error("Problem not found");
         }
         
-        const foundProblem = mockProblems.find(p => p.slug === slug);
-        if (!foundProblem) {
+        // Find current problem and determine adjacent problems for navigation
+        const currentIndex = mockProblems.findIndex(p => p.slug === slug);
+        if (currentIndex === -1) {
           throw new Error("Problem not found");
         }
+        
+        const foundProblem = mockProblems[currentIndex];
+        
+        // Set up prev/next navigation
+        const prevProblem = currentIndex > 0 ? mockProblems[currentIndex - 1].slug : null;
+        const nextProblem = currentIndex < mockProblems.length - 1 ? mockProblems[currentIndex + 1].slug : null;
+        setNextSlug({ prev: prevProblem, next: nextProblem });
         
         // Fetch solutions from local JSON file
         const solutions: Record<string, string> = {};
@@ -49,33 +72,31 @@ const ProblemPage = () => {
           
           const solutionsData: SolutionEntry[] = await response.json();
           
-          // Extract problem number from slug or title
-          const problemIdMatch = foundProblem.title.match(/^\d+/) || slug.match(/\d+/);
-          const problemNumber = problemIdMatch ? problemIdMatch[0] : '';
+          // Extract problem number and name for better matching
+          const problemIdMatch = extractProblemNumber(foundProblem.title);
+          const problemTitleParts = foundProblem.title.split('. ');
+          const problemName = problemTitleParts.length > 1 ? problemTitleParts[1].toLowerCase() : foundProblem.title.toLowerCase();
           
-          // Filter solutions for the current problem - improved matching logic
+          // Filter solutions for the current problem with improved matching logic
           const problemSolutions = solutionsData.filter(solution => {
             // Match by slug containing problem number
-            if (solution.slug && (
-              solution.slug.includes(slug) || 
-              (problemNumber && solution.slug.includes(problemNumber))
-            )) {
+            if (solution.slug && problemIdMatch && solution.slug.includes(problemIdMatch)) {
               return true;
             }
             
-            // Match by title containing the problem title or number
-            if (solution.title && (
-              solution.title.toLowerCase().includes(foundProblem.title.toLowerCase()) ||
-              (problemNumber && solution.title.includes(problemNumber))
-            )) {
+            // Match by title containing the problem number
+            if (solution.title && problemIdMatch && solution.title.includes(problemIdMatch)) {
               return true;
             }
             
-            // Match by language field containing the problem title (for malformed entries)
-            if (solution.language && (
-              solution.language.toLowerCase().includes(foundProblem.title.toLowerCase()) ||
-              (problemNumber && solution.language.includes(problemNumber))
-            )) {
+            // Match by problem name in solution title or language field
+            const solutionLower = solution.title.toLowerCase() + ' ' + solution.language.toLowerCase();
+            if (problemName && solutionLower.includes(problemName)) {
+              return true;
+            }
+            
+            // Match by slug directly
+            if (solution.slug.toLowerCase().includes(slug.toLowerCase())) {
               return true;
             }
             
@@ -96,32 +117,24 @@ const ProblemPage = () => {
               'cpp': ['cpp', 'c++'],
               'javascript': ['javascript', 'js'],
               'typescript': ['typescript', 'ts'],
-              'go': ['go', 'golang']
+              'go': ['go', 'golang'],
+              'ruby': ['ruby'],
+              'c#': ['c#', 'csharp']
             };
             
-            // Try to determine language from the language field
-            const lowerLanguage = solution.language.toLowerCase();
+            // Try to determine language from the language field, title, or slug
+            const allText = (solution.language + ' ' + solution.title + ' ' + solution.slug).toLowerCase();
+            
             for (const [lang, keywords] of Object.entries(languageKeywords)) {
-              if (keywords.some(keyword => lowerLanguage.includes(keyword))) {
+              if (keywords.some(keyword => allText.includes(keyword))) {
                 language = lang;
                 break;
               }
             }
             
-            // If language not found in the language field, try the title
-            if (!language) {
-              const lowerTitle = solution.title.toLowerCase();
-              for (const [lang, keywords] of Object.entries(languageKeywords)) {
-                if (keywords.some(keyword => lowerTitle.includes(keyword))) {
-                  language = lang;
-                  break;
-                }
-              }
-            }
-            
             // Fallback to a default if no language detected
             if (!language) {
-              language = 'unknown';
+              language = 'code';
             }
             
             // Store the solution with the detected language
@@ -220,9 +233,36 @@ const ProblemPage = () => {
               </Button>
             </div>
           ) : problem ? (
-            <div className="max-w-4xl mx-auto">
-              <ProblemDetail problem={problem} />
-            </div>
+            <>
+              <div className="max-w-4xl mx-auto">
+                <ProblemDetail problem={problem} />
+              </div>
+              
+              {/* Problem navigation */}
+              <div className="mt-12">
+                <Pagination>
+                  <PaginationContent>
+                    {prevSlug.prev && (
+                      <PaginationItem>
+                        <PaginationPrevious href={`/problem/${prevSlug.prev}`} />
+                      </PaginationItem>
+                    )}
+                    
+                    <PaginationItem>
+                      <PaginationLink href="/problems">
+                        All Problems
+                      </PaginationLink>
+                    </PaginationItem>
+                    
+                    {prevSlug.next && (
+                      <PaginationItem>
+                        <PaginationNext href={`/problem/${prevSlug.next}`} />
+                      </PaginationItem>
+                    )}
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            </>
           ) : null}
         </div>
       </main>
@@ -233,3 +273,4 @@ const ProblemPage = () => {
 };
 
 export default ProblemPage;
+
